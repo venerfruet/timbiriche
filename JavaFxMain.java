@@ -10,6 +10,8 @@ import javafx.stage.Stage;
 
 public class JavaFxMain extends Application {
 
+	public static int currentColor=0;
+	
 	public void start(Stage primaryStage) throws Exception {
 
 		int rows = Enviroments.MAX_ROWS;
@@ -25,7 +27,7 @@ public class JavaFxMain extends Application {
 		root.getChildren().addAll(new GridGame(rows, columns));
 
 		// Cria a cena da aplicação
-		Scene scene = new Scene(root, 700, 500, Color.SALMON);
+		Scene scene = new Scene(root, 700, 500, Color.LIGHTGRAY);
 
 		// Define e exibe a aplicação
 		primaryStage.setTitle("Main");

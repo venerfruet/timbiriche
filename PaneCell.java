@@ -8,9 +8,11 @@ public class PaneCell extends Pane {
 	private int row;
 	private int column;
 	private String borders[];
-	private String borderStyles;
 	private PaneCell siameseCell;
 	private String currentIdSiamese;
+	private boolean[] fixedBorders;
+	private int fixedCount;
+	private String colorsPlayers[];
 
 	public PaneCell(int row, int column) {
 
@@ -23,19 +25,61 @@ public class PaneCell extends Pane {
 		// Inicializa campos da celula
 		this.row = row;
 		this.column = column;
+		colorsPlayers = new String[] { Enviroments.IA_COLOR, Enviroments.PLAYER_COLOR };
+		fixedBorders = new boolean[5];
 		borders = new String[] { dc, dc, dc, dc };
-		borderStyles = "solid solid solid solid";
 		currentIdSiamese = "";
+		fixedCount = 0;
 
 		// Definição dos eventos da celula
 		defineEvents();
 
 		// Define as bordas iniciais da celula
-		drawBorder(4);
+		drawColorCell(4, Enviroments.DEFAULT_COLOR);
 
 	}
 
 	private void defineEvents() {
+
+		// Evento ao clicar na borda
+		this.setOnMouseClicked((e) -> {
+
+			int left = (int) e.getX();// distância do lado esquerdo da celula
+			int top = (int) e.getY();// distância do topo da celula
+			int right = (int) (this.getBoundsInLocal().getMaxX() - e.getX());// distância do lado direito
+			int botton = (int) (this.getBoundsInLocal().getMaxY() - e.getY());// distância da base
+
+			// Retorna a borda mais próxima 0=topo, 1=direita, 2=base, 3=esquerda
+			int edge = detectEdge(top, right, botton, left);
+
+			if (!fixedBorders[edge]) {
+
+				// Aumenta bordas fixas
+				if (edge < 4)
+					fixedCount++;
+
+				// Pinta a cor da borda
+				drawColorCell(edge, colorsPlayers[JavaFxMain.currentColor]);
+
+				// Fixa cor na borda
+				fixedBorders[edge] = true;
+
+				// Retorna a celula siamesa e destaca sua mais próxima a celula atual
+				siameseCell = iterateSiameseCell(edge, colorsPlayers[JavaFxMain.currentColor], true);
+
+				// Alterna jogador caso uma borda seja clicada e não fechada
+				if (edge < 4) {
+					if (siameseCell != null) {
+						if (fixedCount < 4 && siameseCell.getFixedCount() < 4)
+							JavaFxMain.currentColor = (JavaFxMain.currentColor + 1) % colorsPlayers.length;
+					} else {
+						if (fixedCount < 4)
+							JavaFxMain.currentColor = (JavaFxMain.currentColor + 1) % colorsPlayers.length;
+					}
+				}
+			}
+
+		});
 
 		// Evento ao mover o mouse na celula
 		this.setOnMouseMoved((e) -> {
@@ -48,18 +92,22 @@ public class PaneCell extends Pane {
 			// Retorna a borda mais próxima 0=topo, 1=direita, 2=base, 3=esquerda
 			int edge = detectEdge(top, right, botton, left);
 
-			// Destaca a borda mais próxima do cursor
-			drawBorder(edge);
+			if (!fixedBorders[edge] && edge < 4) {
+				// Destaca a borda mais próxima do cursor
+				drawColorCell(edge, Enviroments.HIGHLIGHT_COLOR);
 
-			// Retorna a celula siamesa e destaca sua mais próxima a celula atual
-			siameseCell = detectSiameseCell(edge);
+				// Retorna a celula siamesa e destaca sua mais próxima a celula atual
+				siameseCell = iterateSiameseCell(edge, Enviroments.HIGHLIGHT_COLOR, false);
+			}
 
 		});
 
 		this.setOnMouseExited((e) -> {
 
-			restoreBorder();
-			drawBorder(4);
+			// Normaliza borda destacada
+			if (fixedCount < 4)
+				drawColorCell(4, Enviroments.DEFAULT_COLOR);
+
 			restoreSiameseCell();
 
 		});
@@ -85,55 +133,86 @@ public class PaneCell extends Pane {
 
 	}
 
-	public void drawBorder(int edge) {
+	public void drawColorCell(int edge, String color) {
 		// top right botton left
 
 		String borderColors;
-		String borderWidths = borderWidths();// Atribui tamanho das bordas atuais
-		String highLightColor = Enviroments.HIGHLIGHT_COLOR;// Atribui cor de destaque
-		String defaultColor = Enviroments.DEFAULT_COLOR;// Atribui cor padrão
+		// Atribui tamanho das bordas atuais
+		String borderWidths = borderWidths();
+		// Atribui cor padrão
+		String defaultColor = Enviroments.DEFAULT_COLOR;
+		// Cor de fundo
+		String bgColor = "rgba(255,255,255,0)";
 
 		switch (edge) {
 		case 0:
-			borders[0] = highLightColor;
-			borders[1] = defaultColor;
-			borders[2] = defaultColor;
-			borders[3] = defaultColor;
+			if (!fixedBorders[0])
+				borders[0] = color;
+			if (!fixedBorders[1])
+				borders[1] = defaultColor;
+			if (!fixedBorders[2])
+				borders[2] = defaultColor;
+			if (!fixedBorders[3])
+				borders[3] = defaultColor;
 			break;
 		case 1:
-			borders[0] = defaultColor;
-			borders[1] = highLightColor;
-			borders[2] = defaultColor;
-			borders[3] = defaultColor;
+			if (!fixedBorders[0])
+				borders[0] = defaultColor;
+			if (!fixedBorders[1])
+				borders[1] = color;
+			if (!fixedBorders[2])
+				borders[2] = defaultColor;
+			if (!fixedBorders[3])
+				borders[3] = defaultColor;
 			break;
 		case 2:
-			borders[0] = defaultColor;
-			borders[1] = defaultColor;
-			borders[2] = highLightColor;
-			borders[3] = defaultColor;
+			if (!fixedBorders[0])
+				borders[0] = defaultColor;
+			if (!fixedBorders[1])
+				borders[1] = defaultColor;
+			if (!fixedBorders[2])
+				borders[2] = color;
+			if (!fixedBorders[3])
+				borders[3] = defaultColor;
 			break;
 		case 3:
-			borders[0] = defaultColor;
-			borders[1] = defaultColor;
-			borders[2] = defaultColor;
-			borders[3] = highLightColor;
+			if (!fixedBorders[0])
+				borders[0] = defaultColor;
+			if (!fixedBorders[1])
+				borders[1] = defaultColor;
+			if (!fixedBorders[2])
+				borders[2] = defaultColor;
+			if (!fixedBorders[3])
+				borders[3] = color;
 			break;
 		default:
-			restoreBorder();
+			if (!fixedBorders[0])
+				borders[0] = defaultColor;
+			if (!fixedBorders[1])
+				borders[1] = defaultColor;
+			if (!fixedBorders[2])
+				borders[2] = defaultColor;
+			if (!fixedBorders[3])
+				borders[3] = defaultColor;
 		}
 
-		borderColors = borderColors();// Atribui cores das bordas
+		// Atribui cores das bordas
+		borderColors = borderColors();
+
+		// Se 4 bordas fixadas pinta a celula
+		if (fixedCount == 4)
+			bgColor = color;
 
 		// Atribui CSS string
-		String border = "" + "-fx-border-width:" + borderWidths + ";" + " -fx-border-color:" + borderColors + ";"
-				+ " -fx-border-style:" + borderStyles + ";";
+		String border = "-fx-background-color:" + bgColor + ";  -fx-background-radius: 50; -fx-border-width:"
+				+ borderWidths + "; -fx-border-color:" + borderColors + "; -fx-border-style: solid;";
 
-		// Atribui estilo à esta celula
+		// Atribui estilo a celula
 		this.setStyle(border);
 
 	}
 
-	private PaneCell detectSiameseCell(int edge) {
+	private PaneCell iterateSiameseCell(int edge, String color, boolean fixed) {
 
 		PaneCell cell = null;
 		int siameseEdege = 4;
@@ -172,24 +251,23 @@ public class PaneCell extends Pane {
 		cell = (PaneCell) this.getScene().lookup(id);
 
 		// Destaca a borda da celula siamesa
-		if (cell != null)
-			cell.drawBorder(siameseEdege);
+		if (cell != null) {
+
+			// Aumenta bordas fixas antes de definir a cor
+			if (fixed)
+				cell.setFixedCount(cell.getFixedCount() + 1);
+
+			// define a cor
+			cell.drawColorCell(siameseEdege, color);
+
+			// Fixa borda após definir a cor
+			if (fixed)
+				cell.setFixedBorders(siameseEdege);
+
+		}
 
 		// Retorna a celula siamesa
 		return cell;
-
-	}
-
-	public void restoreBorder() {
-
-		// Cor padrão
-		String defaultColor = Enviroments.DEFAULT_COLOR;
-
-		// Define todas as bordas com a cor padrão
-		borders[0] = defaultColor;
-		borders[1] = defaultColor;
-		borders[2] = defaultColor;
-		borders[3] = defaultColor;
 
 	}
 
@@ -197,8 +275,8 @@ public class PaneCell extends Pane {
 
 		// Restaurando a celula siamesa
 		if (siameseCell != null) {
-			siameseCell.restoreBorder();
-			siameseCell.drawBorder(4);
+			if (siameseCell.getFixedCount() < 4)
+				siameseCell.drawColorCell(4, Enviroments.DEFAULT_COLOR);
 		}
 
 	}
@@ -242,6 +320,18 @@ public class PaneCell extends Pane {
 
 		return strBorders;
 
+	}
+
+	public void setFixedBorders(int edge) {
+		fixedBorders[edge] = true;
+	}
+
+	public int getFixedCount() {
+		return fixedCount;
+	}
+
+	public void setFixedCount(int fixedCount) {
+		this.fixedCount = fixedCount;
 	}
 
 }
